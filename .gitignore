@@ -1,0 +1,7 @@
+outbreak.db
+outbreakradar.db
+*.db
+__pycache__/
+venv/
+.venv/
+.DS_Store

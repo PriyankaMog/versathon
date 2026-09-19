@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Community health map | OutbreakRadar</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="/"><span id="logo"></span>OutbreakRadar</a>
+  <nav class="nav" id="nav"></nav>
+</div></header>
+<div id="advisories" aria-live="polite"></div>
+<div class="wrap">
+  <div class="stats" id="stats"></div>
+  <div class="layout">
+    <section class="card mapcard" aria-label="Live map">
+      <div class="filters">
+        <label>Category <select id="fcat"><option value="">All</option><option>fever</option><option>diarrhoea</option><option>cough</option><option>rash</option><option>other</option></select></label>
+        <label>Severity <select id="fsev"><option value="">All</option><option>low</option><option>medium</option><option>high</option></select></label>
+        <label>Last <output id="hout">48</output> hours <input id="hours" type="range" min="1" max="72" value="48"></label>
+        <button class="btn btn-sm btn-primary" id="myarea" type="button">Show my area</button>
+      </div>
+      <div id="here" class="here" hidden aria-live="polite"></div>
+      <div id="map"></div>
+      <div class="legend" id="legend"></div>
+      <p class="legendnote muted">Normal: within the usual range for that ward. Watch: above usual. Rising: an unusual cluster. Critical: a strong signal that needs verification by health officers. Colours show activity, not diagnoses.</p>
+    </section>
+
+    <section class="card">
+      <div class="tabs" id="tabs" role="tablist"></div>
+
+      <div class="pane" id="p-alerts">
+        <h3>Active alerts</h3><div id="alerts"></div>
+        <h3>Why no alert?</h3>
+        <p class="muted">Signals that are above normal but were held back, and why.</p><div id="held"></div>
+      </div>
+
+      <div class="pane" id="p-ward">
+        <label class="field"><span>Ward</span><select id="wsel"></select></label>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Category</th><th>Normal per day</th><th>Last 24 hours</th><th>Status</th></tr></thead><tbody id="ntable"></tbody></table></div>
+        <h3>Trend</h3><canvas id="trend" height="190" aria-label="Daily reports against normal"></canvas>
+      </div>
+
+      <div class="pane" id="p-report"></div>
+
+      <div class="pane" id="p-mod">
+        <label class="field"><span>Reason for your next action (saved in the audit log)</span><input id="reason" maxlength="200" placeholder="For example: repeated one-sided reports"></label>
+        <p class="msg" id="modmsg" role="alert" style="color:var(--rt);margin:-6px 0 8px"></p>
+        <h3>Accounts</h3>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Account</th><th>Trust</th><th>Status</th><th>Actions</th></tr></thead><tbody id="users"></tbody></table></div>
+        <h3>Recent reports</h3>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Time</th><th>Ward, category</th><th>By</th><th>Status</th><th></th></tr></thead><tbody id="reps"></tbody></table></div>
+        <h3>Audit log</h3><ul class="log" id="audit"></ul>
+      </div>
+
+      <div class="pane" id="p-adv">
+        <h3>Publish a public advisory</h3>
+        <form id="aform">
+          <label class="field"><span>Ward</span><select id="award"><option value="">All wards</option></select></label>
+          <label class="field"><span>Message</span><textarea id="amsg" rows="4" maxlength="500" required></textarea></label>
+          <button class="btn btn-primary">Publish advisory</button>
+          <p class="msg" id="amsgout" role="status"></p>
+        </form>
+      </div>
+
+      <div class="pane" id="p-area">
+        <h3>Coverage area</h3>
+        <p class="muted">Wards are placed around one point. Set it to the centre of your city or district, so residents who share their location are matched to the nearest ward. Existing reports move with the wards.</p>
+        <div class="acts" style="align-items:flex-end">
+          <label class="field" style="margin:0;flex:1"><span>Latitude</span><input id="clat" inputmode="decimal" placeholder="13.5820"></label>
+          <label class="field" style="margin:0;flex:1"><span>Longitude</span><input id="clng" inputmode="decimal" placeholder="74.7150"></label>
+        </div>
+        <div class="acts"><button class="btn btn-primary" id="cuse">Use my device location</button><button class="btn" id="cmove">Use typed coordinates</button></div>
+        <p class="msg" id="cmsg" role="status"></p>
+        <p class="muted">Ward names and boundaries are placeholders until real ward data is connected.</p>
+      </div>
+
+      <div class="pane" id="p-demo">
+        <h3>Presentation mode: outbreak simulator</h3>
+        <p class="muted">Available only because the server was started with OR_DEMO=1. Simulated reports are labelled and go through the same detection code as real ones.</p>
+        <p class="muted" id="sstate"></p>
+        <div class="acts">
+          <button class="btn btn-primary" id="next">Next stage</button>
+          <button class="btn" id="spam">Test spam accounts</button>
+          <button class="btn" id="reset">Reset simulation</button>
+        </div>
+        <p class="msg" id="smsg" role="status"></p>
+        <p class="muted">"Test spam accounts" creates two temporary accounts that send 15 reports. The system holds back the alert, flags the main account, and you can suspend it under Moderation.</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="/common.js"></script>
+<script>
+const COL = {Normal:'#2F855A', Watch:'#D69E2E', Rising:'#DD6B20', Critical:'#C53030'};
+const LABEL = {open:'Open', investigating:'Under investigation', false_alarm:'Closed as false alarm', confirmed:'Confirmed by authority', escalated:'Escalated'};
+let CFG = {demo:false}, you = null, me = null, wards = [], alerts = [], sel = null, chart, coords = null, heat = null, fitted = false, busy = false, tab = 'alerts';
+const isAuth = () => me && me.role === 'authority';
+const chip = (s, t) => `<span class="chip" style="--c:${COL[s]}"><i></i>${t || s}</span>`;
+
+$('#logo').innerHTML = LOGO;
+$('#legend').innerHTML = Object.keys(COL).map(k => chip(k)).join('');
+const map = L.map('map').setView([0, 0], 2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'&copy; OpenStreetMap'}).addTo(map);
+const circles = L.layerGroup().addTo(map);
+
+/* ---------- header and tabs ---------- */
+function renderNav() {
+  const role = !me ? '' : me.role === 'authority' ? 'Health authority' : me.role === 'health_worker' ? (me.verified ? 'Health worker, verified' : 'Health worker, pending') : 'Citizen';
+  $('#nav').innerHTML = me
+    ? `<span class="who">${esc(me.name)} <span class="badge">${role}</span></span><button class="btn btn-sm" id="out">Sign out</button>`
+    : '<a class="link" href="/">Home</a><a class="btn" href="/login.html">Sign in</a><a class="btn btn-primary" href="/login.html?tab=register">Create account</a>';
+  if (me) $('#out').onclick = async () => { try { await post('/auth/logout'); } catch {} store.del('or_token'); location.href = '/'; };
+}
+function buildTabs() {
+  const t = [['alerts', 'Alerts'], ['ward', 'Ward data'], ['report', 'Report symptoms']];
+  if (isAuth()) { t.push(['mod', 'Moderation'], ['adv', 'Advisory'], ['area', 'Coverage']); if (CFG.demo) t.push(['demo', 'Simulator']); }
+  $('#tabs').innerHTML = t.map(([k, n]) => `<button class="tab" data-t="${k}" role="tab">${n}</button>`).join('');
+  $$('.tab').forEach(b => b.onclick = () => show(b.dataset.t));
+  show(tab);
+}
+function show(k) {
+  tab = k;
+  $$('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === k));
+  $$('.pane').forEach(p => p.classList.toggle('on', p.id === 'p-' + k));
+  if (k === 'ward') drawTrend();
+  if (k === 'mod') loadMod();
+}
+
+/* ---------- map ---------- */
+function drawWards() {
+  circles.clearLayers();
+  wards.forEach(w => L.circle([w.lat, w.lng], {radius:1000, color:COL[w.status], weight:sel === w.id ? 4 : 2, fillColor:COL[w.status], fillOpacity:.22})
+    .bindTooltip(`${w.name}: ${w.status} (score ${w.score})`)
+    .on('click', () => { sel = w.id; renderWard(); drawWards(); show('ward'); }).addTo(circles));
+  if (!fitted && wards.length) { map.fitBounds(wards.map(w => [w.lat, w.lng]), {padding:[60, 60]}); fitted = true; }
+}
+async function drawHeat() {
+  const d = await get(`/heat?hours=${$('#hours').value}&category=${$('#fcat').value}&severity=${$('#fsev').value}`);
+  if (heat) map.removeLayer(heat);
+  heat = L.heatLayer(d.map(([a, b, n]) => [a, b, Math.min(1, n / 12)]), {radius:60, blur:40, minOpacity:.35}).addTo(map);
+}
+
+/* ---------- summary, alerts, ward data ---------- */
+function renderStats() {
+  const open = alerts.filter(a => ['open', 'investigating', 'escalated'].includes(a.workflow)).length;
+  const reports = wards.reduce((n, w) => n + w.signals.reduce((m, s) => m + s.current, 0), 0);
+  $('#stats').innerHTML = [['Open alerts', open, ''], ['Critical wards', wards.filter(w => w.status === 'Critical').length, COL.Critical],
+    ['Rising wards', wards.filter(w => w.status === 'Rising').length, COL.Rising], ['Reports, last 24 hours', reports, '']]
+    .map(([l, v, c]) => `<div class="card stat"><b${c ? ` style="color:${c}"` : ''}>${v}</b><span>${l}</span></div>`).join('');
+}
+function alertHTML(a) {
+  const P = [['Baseline', a.components.baseline, 40], ['Cluster', a.components.spatial, 30], ['Independent reporters', a.components.unique, 20], ['Health workers', a.components.health, 10]].map(([n, v, w]) => [n, v * w, w]);
+  const acts = [['investigate', 'Needs investigation'], ['false_alarm', 'False alarm'], ['confirm', 'Confirm'], ['escalate', 'Escalate']];
+  const open = ['open', 'investigating', 'escalated'].includes(a.workflow);
+  return `<article class="alert" style="--c:${COL[a.status]}">
+    <div class="row"><strong>${esc(a.ward)}, ${esc(a.category)}</strong>${chip(a.status, `${a.status}, score ${a.score}`)}</div>
+    ${a.simulated ? '<p class="tag">Includes simulated reports</p>' : ''}
+    <p>${esc(a.text)}</p>
+    <div class="bar" role="img" aria-label="Score made of four parts">${P.map(([n, p], i) => `<i class="s${i}" style="width:${p}%" title="${n}"></i>`).join('')}</div>
+    <ul class="parts">${P.map(([n, p, w], i) => `<li><b class="s${i}"></b>${n}: ${p.toFixed(0)} of ${w}</li>`).join('')}</ul>
+    <p class="muted">${LABEL[a.workflow]}. This pattern needs verification.</p>
+    ${isAuth() && open ? `<div class="acts">${acts.map(([k, t]) => `<button class="btn btn-sm" data-a="${a.id}" data-k="${k}">${t}</button>`).join('')}</div>` : ''}
+    <ol class="tl">${a.events.map(e => `<li>${time(e.ts)}: ${esc(e.action)}${e.actor ? ` (${esc(e.actor)})` : ''}</li>`).join('')}</ol></article>`;
+}
+function renderAlerts() {
+  $('#alerts').innerHTML = alerts.length ? alerts.map(alertHTML).join('') : '<p class="muted">No alerts right now. Wards at Normal or Watch stay off this list.</p>';
+}
+function renderHeld() {
+  const all = wards.flatMap(w => w.signals);
+  const list = [...all.filter(s => s.alert_blocked), ...all.filter(s => !s.alert_blocked && s.status === 'Watch').sort((a, b) => b.score - a.score)].slice(0, 4);
+  $('#held').innerHTML = list.length ? list.map(s => `<article class="alert" style="--c:${COL[s.status]}">
+    <div class="row"><strong>${esc(s.ward)}, ${esc(s.category)}</strong>${chip(s.status)}</div>
+    <p>${s.current} reports against a normal ${s.baseline} a day.</p>
+    <p class="muted">${s.alert_blocked ? esc(s.blocked) : 'Above normal, but below the alert threshold.'}</p></article>`).join('')
+    : '<p class="muted">Nothing is being held back right now.</p>';
+}
+function renderWard() {
+  const w = wards.find(x => x.id === sel); if (!w) return;
+  $('#wsel').value = sel;
+  $('#ntable').innerHTML = w.signals.map(s => `<tr><td>${esc(s.category)}</td><td>${s.baseline}</td><td>${s.current} (${s.ratio}x)</td><td>${chip(s.status)}</td></tr>`).join('');
+}
+async function drawTrend() {
+  const w = wards.find(x => x.id === sel); if (!w) return;
+  const cat = $('#fcat').value || w.top_category, d = await get(`/trend?ward_id=${sel}&category=${cat}`);
+  if (chart) chart.destroy();
+  chart = new Chart($('#trend'), {type:'bar', data:{labels:d.labels, datasets:[
+    {type:'bar', label:'Reports per day', data:d.counts, backgroundColor:'#0E6B7A'},
+    {type:'line', label:'Normal', data:d.labels.map(() => d.baseline), borderColor:'#C53030', borderDash:[6, 4], pointRadius:0}]},
+    options:{animation:false, plugins:{title:{display:true, text:`${w.name}, ${cat}`}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}}}});
+}
+
+/* ---------- reporting ---------- */
+function showYou() {  // a private marker on your own screen only; it is never sent or shown to anyone else
+  if (you) map.removeLayer(you);
+  you = L.circleMarker(coords, {radius:7, color:'#0E6B7A', fillColor:'#0E6B7A', fillOpacity:1}).bindTooltip('You are here (only you can see this)').addTo(map);
+  map.flyTo(coords, 14);
+}
+const getPosition = () => new Promise((ok, no) => {
+  if (!navigator.geolocation) return no({code:0});
+  navigator.geolocation.getCurrentPosition(ok, no, {enableHighAccuracy:false, timeout:15000, maximumAge:60000});
+});
+const geoErr = e => e.code === 1 ? 'Location is blocked. Allow it for this site in the address bar, then try again.'
+  : 'Location is not available on this device or connection.';
+const STATUS_NOTE = {
+  Normal: 'Reports are within the usual range for this ward.',
+  Watch: 'Reports are a little above the usual level. Keep an eye on advisories.',
+  Rising: 'Reports are unusually high in this ward. Follow guidance from the health authority.',
+  Critical: 'Reports are far above the usual level in this ward. Follow guidance from the health authority.'
+};
+async function showMyArea() {
+  const box = $('#here'); box.hidden = false; box.textContent = 'Finding your location...';
+  try {
+    const p = await getPosition(), d = await get(`/locate?lat=${p.coords.latitude}&lng=${p.coords.longitude}`);
+    if (!d.covered) { box.innerHTML = 'Your location is outside the areas covered so far. You can still browse the map.'; return; }
+    coords = [p.coords.latitude, p.coords.longitude]; showYou();
+    sel = d.ward_id; renderWard(); drawWards();
+    box.innerHTML = `<b>You are in ${esc(d.ward)}</b> ${chip(d.status)}<br>${STATUS_NOTE[d.status]}${d.category && d.status !== 'Watch' ? ` Main signal: ${esc(d.category)}.` : ''}
+      <br><span class="muted">This is awareness information, not a diagnosis. If you feel unwell, see a doctor. Your position is not stored or shown to others.</span>`;
+  } catch (e) { box.textContent = geoErr(e); }
+}
+$('#myarea').onclick = showMyArea;
+const metres = (a, b, c, d) => { const r = Math.PI / 180, x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 12742000 * Math.asin(Math.sqrt(x)); };
+function renderReport() {
+  const el = $('#p-report');
+  if (!me) { el.innerHTML = '<div class="notice">Reporting requires an account. This keeps alerts trustworthy and lets the authority act on misuse.</div><a class="btn btn-primary" href="/login.html?tab=register">Create account</a> <a class="btn" href="/login.html">Sign in</a>'; return; }
+  if (isAuth()) { el.innerHTML = '<div class="notice">Authority accounts review reports and manage alerts. Use a citizen or health-worker account to submit reports.</div>'; return; }
+  const note = me.status !== 'active' ? '<div class="notice bad">Your account is suspended, so new reports are blocked. Please contact the health authority.</div>'
+    : me.role === 'health_worker' && !me.verified ? '<div class="notice warn">Your health-worker status is pending verification. Until then, your reports count as citizen reports.</div>' : '';
+  el.innerHTML = `${note}<h3>Report symptoms</h3><form id="rform">
+    <div class="locbox"><button type="button" class="btn btn-primary" id="loc">Use my current location</button>
+      <p class="muted" id="locmsg">We find your ward from your device location. Your exact position is never shown publicly.</p></div>
+    <label class="field"><span>Ward</span><select name="ward" id="rward"><option value="">Select your ward</option>${wards.map(w => `<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select></label>
+    <label class="field"><span>What are you seeing?</span><select name="category"><option>fever</option><option>diarrhoea</option><option>cough</option><option>rash</option><option>other</option></select></label>
+    <label class="field"><span>How severe?</span><select name="severity"><option>low</option><option selected>medium</option><option>high</option></select></label>
+    ${me.role === 'health_worker' && me.verified ? '<p class="muted">Verified health worker: you can file many reports. Send one report for each household or case you see.</p>' : ''}
+    <div class="acts"><button class="btn btn-primary" ${me.status !== 'active' ? 'disabled' : ''}>Send report</button></div>
+    <p class="msg" id="rmsg" role="status"></p></form>
+    <p class="muted">This form is for awareness reporting, not medical help. For an emergency call 112 or your local emergency number. Reports are linked to your account. Duplicate, excessive or one-sided reports are flagged and can lead to suspension.</p>`;
+  $('#loc').onclick = async () => {
+    const m = $('#locmsg'); m.style.color = ''; m.textContent = 'Finding your location...';
+    try {
+      const p = await getPosition(), d = await get(`/locate?lat=${p.coords.latitude}&lng=${p.coords.longitude}`);
+      if (!d.covered) { coords = null; m.textContent = 'Your location is outside the areas covered so far. Please select your ward from the list.'; return; }
+      coords = [p.coords.latitude, p.coords.longitude]; $('#rward').value = d.ward_id; showYou();
+      m.textContent = `Location found. You are in ${d.ward}. Only the ward is shown publicly.`;
+    } catch (e) { coords = null; m.style.color = 'var(--rt)'; m.textContent = geoErr(e) + ' Select your ward from the list instead.'; }
+  };
+  $('#rform').onsubmit = async e => {
+    e.preventDefault(); const f = new FormData(e.target), m = $('#rmsg'); m.style.color = '';
+    try { await post('/reports', {category:f.get('category'), severity:f.get('severity'), ward_id:f.get('ward') ? +f.get('ward') : null, lat:coords?.[0], lng:coords?.[1]}); m.textContent = 'Report received. Thank you for helping your community.'; }
+    catch (x) { m.style.color = 'var(--rt)'; m.textContent = x.message; }
+    refresh();
+  };
+}
+
+/* ---------- moderation (authority) ---------- */
+async function loadMod() {
+  if (!isAuth()) return;
+  try {
+    const [u, r, a] = await Promise.all([get('/admin/users'), get('/admin/reports'), get('/admin/audit')]);
+    $('#users').innerHTML = u.map(x => {
+      const st = x.status === 'active' ? '<span class="badge b-ok">Active</span>' : x.status === 'suspended' ? '<span class="badge b-warn">Suspended</span>' : '<span class="badge b-bad">Banned</span>';
+      const role = x.role === 'health_worker' ? (x.verified ? 'Health worker, verified' : 'Health worker, pending') : 'Citizen';
+      const btn = (k, t, c = '') => `<button class="btn btn-sm ${c}" data-u="${x.id}" data-k="${k}">${t}</button>`;
+      const acts = [x.role === 'health_worker' && !x.verified ? btn('verify', 'Verify') : '', x.status === 'active' ? btn('suspend', 'Suspend', 'btn-danger') : '',
+        x.status !== 'active' ? btn('reinstate', 'Reinstate') : '', x.status !== 'banned' ? btn('ban', 'Ban', 'btn-danger') : ''].join(' ');
+      return `<tr><td><b>${esc(x.name)}</b><br><span class="muted">${esc(x.email)}<br>${role}, ${x.reports} reports</span></td><td>${x.trust}</td><td>${st}</td><td>${acts}</td></tr>`;
+    }).join('') || '<tr><td colspan="4" class="muted">No accounts yet.</td></tr>';
+    $('#reps').innerHTML = r.map(x => `<tr><td>${time(x.ts)}</td><td>${esc(x.ward)}, ${esc(x.category)}<br><span class="muted">${esc(x.severity)}</span></td><td>${esc(x.who)}</td>
+      <td>${x.status === 'ok' ? 'Counted' : '<span class="badge b-bad">Rejected</span>'}</td>
+      <td>${x.status === 'ok' ? `<button class="btn btn-sm btn-danger" data-r="${x.id}">Mark false</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No reports yet.</td></tr>';
+    $('#audit').innerHTML = a.map(x => `<li><b>${esc(x.actor)}</b> ${esc(x.action.replace('_', ' '))}: ${esc(x.target)}${x.detail ? `, ${esc(x.detail)}` : ''}<br><span class="muted">${time(x.ts)}</span></li>`).join('') || '<li class="muted">Nothing recorded yet.</li>';
+  } catch (e) { console.error(e); }
+}
+$('#p-mod').onclick = async e => {
+  const b = e.target.closest('button'); if (!b || !(b.dataset.u || b.dataset.r)) return;
+  const reason = $('#reason').value.trim(), m = $('#modmsg'); m.textContent = '';
+  try {
+    if (b.dataset.u) await post(`/admin/users/${b.dataset.u}/action`, {action:b.dataset.k, reason});
+    else await post(`/admin/reports/${b.dataset.r}/reject`, {reason:reason || 'Marked false by authority'});
+    $('#reason').value = '';
+  } catch (x) { m.textContent = x.message; return; }
+  await refresh(); loadMod();
+};
+$('#alerts').onclick = async e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  try { await post(`/alerts/${b.dataset.a}/action`, {action:b.dataset.k}); } catch (x) { return; }
+  refresh();
+};
+$('#aform').onsubmit = async e => {
+  e.preventDefault();
+  try { await post('/advisories', {ward_id:$('#award').value ? +$('#award').value : null, message:$('#amsg').value}); $('#amsg').value = ''; $('#amsgout').textContent = 'Advisory published.'; refresh(); }
+  catch (x) { $('#amsgout').textContent = x.message; }
+};
+const sim = (path, id) => $(id).onclick = async () => { try { await post(path); $('#smsg').textContent = ''; } catch (x) { $('#smsg').textContent = x.message; } await refresh(); if (tab === 'mod') loadMod(); };
+async function moveArea(lat, lng, note) {
+  try { await post('/admin/center', {lat, lng}); fitted = false; $('#cmsg').textContent = note; await refresh(); }
+  catch (x) { $('#cmsg').textContent = x.message; }
+}
+$('#cuse').onclick = async () => {
+  const m = $('#cmsg'); m.textContent = 'Finding your location...';
+  try {
+    const p = await getPosition();
+    $('#clat').value = p.coords.latitude.toFixed(4); $('#clng').value = p.coords.longitude.toFixed(4);
+    moveArea(p.coords.latitude, p.coords.longitude, `Coverage area moved to your device position (accuracy about ${Math.round(p.coords.accuracy)} m). If it looks wrong, type coordinates instead.`);
+  } catch (e) { m.textContent = geoErr(e) + ' Type the coordinates instead.'; }
+};
+$('#cmove').onclick = () => {
+  const lat = parseFloat($('#clat').value), lng = parseFloat($('#clng').value);
+  if (isNaN(lat) || isNaN(lng)) { $('#cmsg').textContent = 'Enter both latitude and longitude.'; return; }
+  moveArea(lat, lng, 'Coverage area moved.');
+};
+sim('/simulate/next', '#next'); sim('/simulate/spam', '#spam'); sim('/simulate/reset', '#reset');
+
+/* ---------- data refresh ---------- */
+function fillWardSelects() {
+  if ($('#wsel').options.length) return;
+  const opts = wards.map(w => `<option value="${w.id}">${esc(w.name)}</option>`).join('');
+  $('#wsel').innerHTML = opts; $('#award').insertAdjacentHTML('beforeend', opts);
+  $('#wsel').onchange = e => { sel = +e.target.value; renderWard(); drawWards(); drawTrend(); };
+}
+async function refresh() {
+  if (busy) return; busy = true;
+  try {
+    wards = await get('/wards');
+    if (!sel) sel = [...wards].sort((a, b) => b.score - a.score)[0].id;
+    const [al, adv, st] = await Promise.all([get('/alerts'), get('/advisories'), CFG.demo ? get('/simulate/state') : null]);
+    alerts = al; fillWardSelects(); drawWards(); renderStats(); renderAlerts(); renderHeld(); renderWard();
+    $('#advisories').innerHTML = adv.length ? `<div class="wrap">${adv.slice(0, 2).map(a => `<p><b>Advisory for ${esc(a.ward)}</b> at ${time(a.ts)}: ${esc(a.message)}</p>`).join('')}</div>` : '';
+    if (st) $('#sstate').textContent = `Simulated data. ${st.stage ? `Stage ${st.stage} of ${st.total}: ${st.label}.` : 'Not started.'}`;
+    await Promise.all([drawHeat(), tab === 'ward' ? drawTrend() : 0]);
+    if (tab === 'mod') loadMod();
+  } catch (e) { console.error(e); }
+  busy = false;
+}
+['fcat', 'fsev'].forEach(id => $('#' + id).onchange = () => { drawHeat(); if (tab === 'ward') drawTrend(); });
+$('#hours').oninput = e => { $('#hout').textContent = e.target.value; };
+$('#hours').onchange = drawHeat;
+
+(async () => {
+  try { CFG = await get('/config'); } catch {}
+  if (store.get('or_token')) { try { me = await get('/auth/me'); } catch { store.del('or_token'); me = null; } }
+  renderNav(); buildTabs(); await refresh(); renderReport();
+  setInterval(refresh, 8000);
+})();
+</script>
+</body>
+</html>

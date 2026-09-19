@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OutbreakRadar | Community health early warning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="/"><span id="logo"></span>OutbreakRadar</a>
+  <nav class="nav">
+    <a class="link" href="#how">How it works</a><a class="link" href="#who">Who it helps</a><a class="link" href="#safe">Stay safe</a><a class="link" href="#trust">Trust and safety</a><a class="link" href="/app.html">Community map</a>
+    <a class="btn" href="/login.html">Sign in</a><a class="btn btn-primary" href="/login.html?tab=register">Create account</a>
+  </nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <div>
+    <h1>Know what is happening with health in your neighbourhood.</h1>
+    <p>OutbreakRadar helps residents, health workers and health authorities notice unusual patterns of illness early, so advice and help can reach people sooner.</p>
+    <a class="btn btn-primary btn-lg" href="/app.html">Check your area</a>
+    <a class="btn btn-ghost btn-lg" href="/login.html?tab=register">Report symptoms</a>
+    <small>An awareness and early-warning service. It does not diagnose illness. In an emergency, call 112 or your local emergency number.</small>
+  </div>
+  <svg viewBox="0 0 360 320" role="img" aria-label="Ward map with status colours">
+    <g fill="none" stroke="#3B6577" stroke-width="1.5"><circle cx="180" cy="160" r="150"/><circle cx="180" cy="160" r="100"/><circle cx="180" cy="160" r="50"/></g>
+    <g stroke="#3B6577" stroke-width="1.5"><line x1="180" y1="10" x2="180" y2="310"/><line x1="30" y1="160" x2="330" y2="160"/></g>
+    <circle cx="120" cy="100" r="16" fill="#2F855A"/><circle cx="250" cy="90" r="16" fill="#D69E2E"/><circle cx="90" cy="200" r="16" fill="#2F855A"/>
+    <circle cx="230" cy="215" r="22" fill="#C53030"/><circle cx="230" cy="215" r="38" fill="none" stroke="#C53030" stroke-width="2" opacity=".5"/>
+    <circle cx="170" cy="150" r="16" fill="#DD6B20"/>
+  </svg>
+</div></section>
+
+<section class="section" id="how"><div class="wrap">
+  <h2>From a single report to an explained alert</h2>
+  <p class="lead">Every step is visible, so health officers can verify an alert instead of trusting a black box.</p>
+  <div class="grid4">
+    <div class="card feat"><div class="num">1</div><h3>Report</h3><p>Choose a symptom and severity. Your ward is found from your location, which is never shown publicly.</p></div>
+    <div class="card feat"><div class="num">2</div><h3>Detect</h3><p>Each ward is compared with its own normal daily count, then checked for clusters within 500 m.</p></div>
+    <div class="card feat"><div class="num">3</div><h3>Explain</h3><p>Every alert shows its numbers and a four-part score, so anyone can see why it fired.</p></div>
+    <div class="card feat"><div class="num">4</div><h3>Act and inform</h3><p>Authorities investigate, escalate or close the alert, and publish advisories to the public.</p></div>
+  </div>
+</div></section>
+
+<section class="section" id="who" style="background:#fff"><div class="wrap">
+  <h2>Built for the whole community</h2>
+  <p class="lead">One shared picture of local health, with a clear role for everyone.</p>
+  <div class="grid3">
+    <div class="card feat"><h3>Residents</h3><p>See whether illness reports in your ward are normal or rising, read advisories from the health authority, and report symptoms using your current location.</p></div>
+    <div class="card feat"><h3>Health workers</h3><p>Verified health-worker reports carry more weight, so what you see on the ground reaches decision-makers quickly.</p></div>
+    <div class="card feat"><h3>Health authorities</h3><p>Get explained alerts, decide to investigate, escalate or close them, and publish advisories that residents can read straight away.</p></div>
+  </div>
+</div></section>
+
+<section class="section" id="safe"><div class="wrap">
+  <h2>Simple steps that protect your family</h2>
+  <p class="lead">General health information. It is not medical advice, so follow guidance from your local health authority.</p>
+  <div class="grid3">
+    <div class="card feat"><h3>Safe water and food</h3><p>Drink boiled or treated water when advised. Keep food covered and eat freshly cooked meals.</p></div>
+    <div class="card feat"><h3>Clean hands</h3><p>Wash hands with soap before eating or cooking and after using the toilet.</p></div>
+    <div class="card feat"><h3>Stop mosquito breeding</h3><p>Empty containers that hold standing water at least once a week, and use nets or repellents.</p></div>
+  </div>
+  <p class="callout"><b>Get medical care early</b> for a high or lasting fever, severe or long-lasting diarrhoea, signs of dehydration, or trouble breathing. In an emergency, call 112 or your local emergency number.</p>
+</div></section>
+
+<section class="section" id="trust" style="background:#fff"><div class="wrap">
+  <h2>Built to resist false and spam reports</h2>
+  <p class="lead">A health warning system is only useful if people can trust it. These safeguards are in the product today.</p>
+  <div class="grid3">
+    <div class="card feat"><h3>Accounts and verification</h3><p>Reporting requires an account. Health workers are treated as citizens until the authority verifies them.</p></div>
+    <div class="card feat"><h3>Rate limits</h3><p>Each account can file a limited number of reports per hour, and duplicate reports are rejected.</p></div>
+    <div class="card feat"><h3>Independent-evidence check</h3><p>If most reports come from one account, no alert fires and the system explains why.</p></div>
+    <div class="card feat"><h3>Trust scores</h3><p>One-sided reporting lowers an account's trust score automatically and flags it for review.</p></div>
+    <div class="card feat"><h3>Authority moderation</h3><p>Officers can reject a report, verify, suspend, reinstate or ban an account. Rejected reports stop counting.</p></div>
+    <div class="card feat"><h3>Audit log</h3><p>Every automatic flag and every officer decision is recorded with who, what and when.</p></div>
+  </div>
+</div></section>
+
+<section class="section band"><div class="wrap">
+  <h2>Check your area now</h2>
+  <p class="lead" style="margin:0 auto 24px">The community map is open to everyone. Create a free account to report symptoms.</p>
+  <a class="btn btn-primary btn-lg" href="/app.html">Open the community map</a>
+</div></section>
+
+<footer class="footer"><div class="wrap">OutbreakRadar is an awareness tool, not a diagnosis tool. Patterns shown here need verification by health authorities. It does not replace professional medical care. <span id="demoNote"></span></div></footer>
+<script src="/common.js"></script>
+<script>$('#logo').innerHTML = LOGO;
+get('/config').then(c => { if (c.demo) $('#demoNote').textContent = 'Presentation mode is on: this server includes simulated reports.'; }).catch(() => {});</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign in | OutbreakRadar</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="authpage">
+  <aside class="authside">
+    <a class="brand" href="/"><span id="logo"></span>OutbreakRadar</a>
+    <div>
+      <h1>Early warning starts with trusted reports.</h1>
+      <p>Sign in to report symptoms in your area. Health authorities sign in to review alerts, moderate accounts and publish advisories.</p>
+    </div>
+    <p style="font-size:.85rem;margin:0">An awareness tool, not a diagnosis tool.</p>
+  </aside>
+  <main class="authmain"><div class="authbox">
+    <h2 id="title">Welcome back</h2>
+    <p class="muted" id="sub">Sign in to continue.</p>
+    <div class="seg" role="tablist"><button id="t-in" class="on" type="button">Sign in</button><button id="t-up" type="button">Create account</button></div>
+    <form id="form" novalidate>
+      <label class="field" id="f-name" hidden><span>Full name</span><input id="name" autocomplete="name" maxlength="60"></label>
+      <label class="field"><span>Email</span><input id="email" type="email" autocomplete="email" required></label>
+      <label class="field"><span>Password</span><input id="pw" type="password" autocomplete="current-password" required><small class="muted" id="pwhint" hidden>At least 8 characters.</small></label>
+      <label class="field" id="f-role" hidden><span>I am registering as</span>
+        <select id="role"><option value="citizen">Citizen</option><option value="health_worker">Health worker (verified by the health authority)</option></select></label>
+      <button class="btn btn-primary btn-lg" style="width:100%" id="go">Sign in</button>
+      <p class="msg" id="msg" role="alert"></p>
+    </form>
+    <p class="muted" style="margin-top:18px"><a href="/app.html">Continue as guest</a> to view the live map without an account.</p>
+  </div></main>
+</div>
+<script src="/common.js"></script>
+<script>
+$('#logo').innerHTML = LOGO;
+let signup = false;
+function mode(up) {
+  signup = up;
+  $('#t-in').classList.toggle('on', !up); $('#t-up').classList.toggle('on', up);
+  ['f-name', 'f-role', 'pwhint'].forEach(i => $('#' + i).hidden = !up);
+  $('#title').textContent = up ? 'Create your account' : 'Welcome back';
+  $('#sub').textContent = up ? 'Reports are tied to your account to keep alerts trustworthy.' : 'Sign in to continue.';
+  $('#go').textContent = up ? 'Create account' : 'Sign in';
+  $('#pw').autocomplete = up ? 'new-password' : 'current-password'; $('#msg').textContent = '';
+}
+$('#t-in').onclick = () => mode(false); $('#t-up').onclick = () => mode(true);
+if (new URLSearchParams(location.search).get('tab') === 'register') mode(true);
+$('#form').onsubmit = async e => {
+  e.preventDefault(); const m = $('#msg'); m.style.color = ''; m.textContent = '';
+  const email = $('#email').value.trim(), password = $('#pw').value;
+  if (!email || !password) { m.textContent = 'Enter your email and password.'; return; }
+  $('#go').disabled = true;
+  try {
+    const d = signup ? await post('/auth/register', {name:$('#name').value, email, password, role:$('#role').value}) : await post('/auth/login', {email, password});
+    store.set('or_token', d.token); location.href = '/app.html';
+  } catch (x) { m.style.color = 'var(--rt)'; m.textContent = x.message; }
+  $('#go').disabled = false;
+};
+</script>
+</body>
+</html>
